@@ -1,26 +1,37 @@
 {
   "name": "chat-reborn",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
-    "@testing-library/user-event": "^12.1.10",
+    "@tippyjs/react": "^4.2.0",
+    "@welldone-software/why-did-you-render": "^6.0.5",
+    "connect-redis": "^5.0.0",
+    "cookie-parser": "^1.4.5",
+    "express": "^4.17.1",
+    "express-favicon": "^2.0.1",
+    "express-session": "^1.17.1",
+    "mongodb": "^3.6.0",
+    "querystring": "^0.2.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
+    "react-router-dom": "^5.2.0",
     "react-scripts": "4.0.2",
-    "web-vitals": "^1.0.1"
+    "redis": "^3.0.2",
+    "sendmail": "^1.6.1",
+    "sha256": "^0.2.0",
+    "styled-components": "^5.1.1",
+    "ws": "^7.3.1"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "node server.js --trace-deprecation --trace-warnings",
+    "startdev": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "buildp": "react-scripts build --profile",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
-      "react-app",
-      "react-app/jest"
+      "react-app"
     ]
   },
   "browserslist": {
@@ -34,5 +45,20 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "engines": {
+    "node": ">=15.0.1"
+  },
+  "homepage": ".",
+  "proxy": "http://localhost:3000/",
+  "optionalDependencies": {
+    "jshint": "^2.12.0",
+    "source-map-explorer": "^2.4.2"
+  },
+  "resolutions": {
+    "styled-components": "^5"
+  },
+  "devDependencies": {
+    "babel-plugin-styled-components": "^1.12.0"
   }
 }
