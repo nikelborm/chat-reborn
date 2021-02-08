@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { Component } from "react";
 import InputForm from "./InputForm";
-import MessagesList from "./MessagesList";
+import MessagesArea from "./MessagesArea";
 import MyAccountInfo from "./MyAccountInfo";
 import ChatsList from "./ChatsList";
 
@@ -11,12 +11,56 @@ import parseMessageBody from '../tools/parseMessageBody';
 import getCookie from "../../../tools/getCookie";
 import { Controllers } from './controllers';
 // import loader from "../tools/loader";
-
+// ! На один запрос одно ответное сообщение - используй это как принцип построения сервера
 // const whyDidYouRender = require("@welldone-software/why-did-you-render");
 // whyDidYouRender(React, {
 //     trackAllPureComponents: true,
 // });
 // "@welldone-software/why-did-you-render": "^4.0.5",
+import styled from "styled-components";
+
+const ChatArea = styled.div`
+    border-top: 1px solid #cfdae1;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 176px;
+    right:175px;
+    box-shadow: inset 0 1px 3px rgba(207, 218, 225, 0.42)
+`;
+
+const ChatAreaTitle = styled.div`
+    padding: 10px;
+    overflow: hidden;
+    line-height: 15px;
+
+    & > i {
+        font-size: 14px;
+        float: right;
+        color: #a8bbc6;
+        cursor: pointer;
+    }
+`;
+
+const WindowAreaWrapper = styled.div`
+    position: absolute;
+    top: 40px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding-left: 176px;
+`;
+
+const ConversationList = styled.div`
+    width: 176px;
+    background: #505d71;
+    float: left;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+`;
+
 class WindowArea extends Component {
     constructor(props) {
         super(props);
@@ -289,10 +333,10 @@ class WindowArea extends Component {
         // TODO: Убрать лишние ререндеры у компонентов
         const { chatsHistory, usersInRooms, rooms, directChats,  activeChat, muted, entities} = this.state;
         return (
-            <div className="window-area">
-                <div className="conversation-list">
+            <WindowAreaWrapper>
+                <ConversationList>
                     {/* TODO: Добавить инпут для добавления нового чата */}
-                    <Controllers.Provider value={this.controllers} >
+                    <Controllers.Provider value={ this.controllers } >
                         <ChatsList
                             rooms={rooms}
                             directChats={directChats}
@@ -302,13 +346,13 @@ class WindowArea extends Component {
                         />
                     </Controllers.Provider>
                     <MyAccountInfo />
-                </div>
-                <div className="chat-area">
-                    <div className="title">
+                </ConversationList>
+                <ChatArea>
+                    <ChatAreaTitle>
                         <b> Переписка </b>
                         <i className="fa fa-search"></i>
-                    </div>
-                    <MessagesList
+                    </ChatAreaTitle>
+                    <MessagesArea
                         entities={entities}
                         history={chatsHistory[activeChat]}
                         activeChat={activeChat}
@@ -318,9 +362,9 @@ class WindowArea extends Component {
                     <InputForm
                         activeChat={activeChat}
                     />
-                </div>
+                </ChatArea>
                 <RightTabs />
-            </div>
+            </WindowAreaWrapper>
         );
     }
 }
