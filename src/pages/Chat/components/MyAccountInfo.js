@@ -1,33 +1,84 @@
 /* eslint-disable no-useless-concat */
-import React, { Component } from "react";
+import React from "react";
+import styled from "styled-components";
 import getCookie from "../../../tools/getCookie";
 import emptyAvatar from "../styles/unnamed.jpg";
 
-class MyAccountInfo extends Component {
-    shouldComponentUpdate() {
-        return false;
-        // TODO: Как только добавится возможность редактировать свои данные, обновить это и изменить на PureComponent
+const MyAccountInfoContainer = styled.div`
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 29px;
+    padding: 8px;
+    background: #445166;
+`;
+
+const AvatarContainer = styled.div`
+    width: 30px;
+    height: 30px;
+    float: left;
+    position: relative;
+
+    & > i {
+        position: absolute;
+        top: -2px;
+        right: -2px;
     }
-    render() {
-        return (
-            <div className="my-account">
-                <div className="image">
-                    <img src={getCookie("avatarLink") || emptyAvatar} title="Аватар выбирается случайно" alt="User"/>
-                    {/* TODO: Сделать чтобы при клике на аватарку открывалось меню её изменения */}
-                    <i className={"fa fa-circle " + "online"}></i>
-                    {/* TODO: Сделать чтобы можно выбрать свой онлайн и он ставился после задержки: offline, online, idle */}
-                </div>
-                <div className="name">
-                    <span id="myName" title={getCookie("nickName") || "Error"}>
-                        {getCookie("fullName") || "Error"}{" "}
-                    </span>
-                    <i className="fa fa-angle-down"></i>
-                    <span className="availability">
-                        {getCookie("statusText") || "Error"}
-                    </span>
-                </div>
-            </div>
-        );
+`;
+
+const Avatar = styled.img`
+    width: 30px;
+    height: 30px;
+    border-radius: 30px;
+`;
+
+const NameAndStatus = styled.div`
+    color: #fff;
+    font-weight: 600;
+    margin-left: 10px;
+    float: left;
+    cursor: pointer;
+
+    & > i {
+        font-weight: bold;
     }
-}
-export default MyAccountInfo;
+`;
+
+const MyAccountName = styled.span`
+    overflow: hidden;
+`;
+
+const ProfileLifeStatus = styled.span`
+    display: block;
+    font-weight: normal;
+    color: #8391a1;
+    margin-top: 5px;
+`;
+
+// TODO: передавать данные не из куков, а с помощью потребителя контекста глобального состояния
+const MyAccountInfo = () => (
+    <MyAccountInfoContainer>
+        <AvatarContainer>
+            {/* TODO: Сделать чтобы при клике на аватарку открывалось меню её изменения */}
+            <Avatar
+                src={getCookie("avatarLink") || emptyAvatar}
+                title="Аватар выбирается случайно"
+                alt="User"
+            />
+            <i className={"fa fa-circle " + "online"}></i>
+            {/* TODO: Сделать чтобы можно выбрать свой онлайн и он ставился после задержки: offline, online, idle */}
+        </AvatarContainer>
+        <NameAndStatus>
+            <MyAccountName title={getCookie("nickName") || "Error"}>
+                { getCookie("fullName") || "Error" }{" "}
+            </MyAccountName>
+            <i className="fa fa-angle-down"></i>
+            <ProfileLifeStatus>
+                { getCookie("statusText") || "Error" }
+            </ProfileLifeStatus>
+        </NameAndStatus>
+    </MyAccountInfoContainer>
+);
+
+export default React.memo( MyAccountInfo );
