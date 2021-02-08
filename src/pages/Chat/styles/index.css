@@ -48,41 +48,6 @@ html, body {
 	font-size: 12px;
 	color: #333f4d;
 }
-.window-title{
-	padding: 14px;
-	position: relative;
-}
-.dots{
-	float: left;
-	width: 50px;
-}
-.window-title > .title{
-	overflow: hidden;
-	text-align: center;
-    font-weight: bold;
-}
-.window-title > .exit{
-	position: absolute;
-	right: 14px;
-	top: 12px;
-}
-.dots > i{
-	margin-right: 2px;
-}
-.dots > i:nth-child(1){
-	color: #f57e7d;
-}
-.dots > i:nth-child(2){
-	color: #ffc881;
-}
-.dots > i:nth-child(3){
-	color: #82cf85;
-}
-.exit > i{
-	color: #E62424;
-	font-size: 22px;
-	cursor: pointer;
-}
 .window-area{
 	position: absolute;
 	top: 40px;
@@ -248,109 +213,6 @@ html, body {
 	color: #738ba3;
 	font-size: 9px;
 }
-.input-area{
-	background: #e4eaee;
-	padding: 6px;
-	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	border-top: 1px solid #cfdae1;
-}
-.input-area .input-wrapper{
-	background: #fff;
-	border: 1px solid #cfdae1;
-	border-radius: 5px;
-	overflow: hidden;
-	float: left;
-}
-.input-area .input-wrapper input{
-	height: 30px;
-	line-height: 30px;
-	border: 0;
-	margin: 0;
-	padding: 0 10px;
-	outline: none;
-	color: #5D7185;
-	min-width: 318px;
-}
-.input-area .input-wrapper i{
-	font-size: 18px;
-	color: #a0b4c0;
-	margin-right: 10px;
-	cursor: pointer;
-}
-.input-area > button{
-	background-repeat: no-repeat;
-	background-image: url(paper-plane-solid.svg);
-	background-color: #e4eaee;
-	background-position: center;
-	width: 20px;
-	border: none;
-    letter-spacing:1px;
-	font-weight: bold;
-	color: #fff;
-	border-radius: 5px;
-	float:right;
-	height: 32px;
-	line-height: 30px;
-	cursor: pointer;
-	font-family: 'Open Sans', Arial, sans-serif;
-    outline: none;
-}
-.right-tabs{
-	position: absolute;
-	top: 0;
-	right: 0;
-	bottom: 0;
-	overflow: hidden;
-	border-left: 1px solid #cfdae1;
-	border-top: 1px solid #cfdae1;
-	width: 175px;
-}
-.right-tabs > ul.tabs{
-	list-style: none;
-	overflow: hidden;
-}
-.right-tabs > ul.tabs > li{
-	float: left;
-	width: 33.3%;
-	text-align: center;
-	border-bottom: 1px solid #cfdae1;
-}
-.right-tabs > ul.tabs > li > a{
-	border-left: 1px solid #cfdae1;
-	color: #72a3ff;
-	display: block;
-	background: #eef2f8;
-	padding: 8px 0;
-}
-.right-tabs > ul.tabs > li.active{
-	border-bottom: none;
-}
-.right-tabs > ul.tabs > li.active > a{
-	background: #fff;
-	color: #c3ccd3;
-}
-.right-tabs > ul.tabs > li:first-child > a{
-	border-left: none;
-}
-.right-tabs > ul.tabs > li > a >i{
-	font-size: 18px
-}
-ul.tabs-container{
-	list-style: none;
-	padding: 10px;
-	color: #6e7f91;
-}
-.right-tabs > .fa-cog{
-	position: absolute;
-	bottom: 14px;
-	right: 14px;
-	color: #a0b4c0;
-	font-size: 18px;
-	cursor: pointer;
-}
 .member-list > li{
 	padding: 5px 0;
 }
@@ -371,47 +233,6 @@ ul.tabs-container{
 	float: right;
 	font-size: 9px;
 	margin-top: 4px;
-}
-.my-account{
-	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	height: 29px;
-	padding: 8px;
-	background: #445166;
-}
-.my-account > .image{
-	width: 30px;
-	height: 30px;
-	float: left;
-	position: relative;
-}
-.my-account > .image > i{
-	position: absolute;
-	top: -2px;
-	right: -2px;
-}
-.my-account > .image > img{
-	width: 30px;
-	height: 30px;
-	border-radius: 30px;
-}
-.my-account > .name{
-	color: #fff;
-	font-weight: 600;
-	margin-left: 10px;
-	float: left;
-	cursor: pointer;
-}
-.my-account > .name > i{
-	font-weight: bold;
-}
-.my-account > .name .availability{
-	display: block;
-	font-weight: normal;
-	color: #8391a1;
-	margin-top: 5px;
 }
 ::-webkit-scrollbar-track {
 	background-color: #DBDBDB;
@@ -439,6 +260,7 @@ ul.tabs-container{
 .tippy-tooltip.emoji-theme[data-placement^='bottom'] .tippy-arrow {
     border-bottom-color: rgb(255, 78, 78)
 }
+
 .ReactionButtons button {
 	background: #eee;
 	border: none;
@@ -464,8 +286,4 @@ ul.tabs-container{
 .ReactionButtons .emoji {
 	transition: transform 0.15s;
 	will-change: transform;
-}
-
-#myName {
-	overflow: hidden;
 }
