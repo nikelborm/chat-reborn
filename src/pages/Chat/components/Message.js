@@ -11,7 +11,7 @@ const MyMessage = styled( InterlocutorMessage )`
     background: #e4eaee;
 `;
 
-const SendersName = styled( InterlocutorMessage )`
+const SendersName = styled.div`
     padding: 14px;
     text-align: right;
     width: 80px;

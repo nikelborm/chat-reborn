@@ -1,6 +1,7 @@
 import React, { PureComponent } from "react";
 import { Controllers } from './controllers';
-
+import { DirectChatItem } from "./ChatListItems";
+import { LeftChatIcon } from "./LeftChatIcon";
 class DirectChat extends PureComponent {
     // Это надо чтобы тысячу раз не пересоздавать фунции и не запускать часто garbage collector, хотя я не до конца уверен, что это сработает
     onDeleteChat = ev => this.context.onDeleteChat(ev, this.props.id, true);
@@ -10,20 +11,20 @@ class DirectChat extends PureComponent {
         const { isMuted, nickName, fullName, onlineStatus } = this.props;
 
         return (
-            <li className="item" onClick={this.onSelectChat}>
-                <i className={"fa fa-circle-o " + onlineStatus}></i>
-                <span title={nickName}>
-                    {fullName}
+            <DirectChatItem onClick={this.onSelectChat}>
+                <LeftChatIcon onlineStatus={onlineStatus} className="fa fa-circle-o"/>
+                <span title={ nickName }>
+                    { fullName }
                 </span>
-                <i
+                <LeftChatIcon
                     className="far fa-trash-alt"
                     onClick={this.onDeleteChat}
                 />
-                <i
+                <LeftChatIcon
                     className={"far fa-bell" + (isMuted ? "-slash": "")}
                     onClick={this.onMuteChange}
                 />
-            </li>
+            </DirectChatItem>
         );
     }
 }
