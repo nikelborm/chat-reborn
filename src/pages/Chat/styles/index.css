@@ -29,104 +29,10 @@ html, body {
 	place-items: center center;
 }
 
-.chatListsUl {
-	list-style: none;
-}
-.roomsForExpanding {
-	list-style: none;
-}
-
-.item {
-	padding: 10px 0 10px 7px;
-	color: #d2d7e1;
-	text-decoration: none;
-	display: block;
-	position: relative;
-	border-bottom: 2px solid #586476;
-}
-.tabbed.item {
-	padding-left: 20px;
-}
-.item:not(.header) {
-	cursor: pointer;
-}
-.item:hover,
-.item.active,
-.item.header {
-	background: #445166;
-	color: #fff;
-}
-.item i{
-	color: #79889d;
-	font-size: 1.2em;
-}
-.item span{
-	display: inline-block;
-	margin-left: 7px;
-}
-.item i.fa-trash-alt{
-	position: absolute;
-	top: 12px;
-	right: 7px;
-	font-size: 10px;
-}
-.item i.fa-angle-down{
-	position: absolute;
-	top: 11px;
-	right: 41px;
-	font-size: 16px;
-	font-weight: bold;
-}
-.item i.fa-bell,
-.item i.fa-bell-slash {
-	position: absolute;
-	top: 11px;
-}
-.item i.fa-bell {
-	right: 24.6px;
-	font-size: 14px;
-}
-.item i.fa-bell-slash {
-	right: 20px;
-	font-size: 14px;
-}
 .reversed {
 	transform: rotate(180deg);
 }
-.hidden {
-	height: 0;
-    overflow: hidden;
-}
-.conversation-list .online{
-	color: #82cf85;
-}
-.conversation-list .idle{
-	color: #ffac69;
-}
-.conversation-list .offline{
-	color: #f57e7d;
-}
-.member-list > li{
-	padding: 5px 0;
-}
-.member-list > li .status{
-	margin: 0 10px 0 0;
-	font-size: 14px;
-}
-.member-list > li .status.online{
-	color: #82cf85;
-}
-.member-list > li .status.idle{
-	color: #ffac69;
-}
-.member-list > li .status.offline{
-	color: #f57e7d;
-}
-.member-list > li .time{
-	float: right;
-	font-size: 9px;
-	margin-top: 4px;
-}
+
 ::-webkit-scrollbar-track {
 	background-color: #DBDBDB;
 }

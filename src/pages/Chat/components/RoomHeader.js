@@ -1,5 +1,7 @@
 import React, { PureComponent } from "react";
 import { Controllers } from './controllers';
+import { LeftChatIcon } from "./LeftChatIcon";
+import { RoomItem } from "./ChatListItems";
 
 class RoomHeader extends PureComponent {
     // Это надо чтобы тысячу раз не пересоздавать фунции и не запускать часто garbage collector, хотя я не до конца уверен, что это сработает
@@ -11,24 +13,24 @@ class RoomHeader extends PureComponent {
         const { nickName, fullName, isExpanded, isMuted } = this.props;
 
         return (
-            <li className="item" onClick={this.onSelectChat}>
-                <i className="fas fa-user-alt"></i>
+            <RoomItem onClick={this.onSelectChat} isExpanded={ isExpanded }>
+                <LeftChatIcon className="fas fa-user-alt"/>
                 <span title={nickName}>
                     {fullName}
                 </span>
-                <i
+                <LeftChatIcon
                     className={"fa fa-angle-down" + (isExpanded ? " reversed": "")}
                     onClick={this.onExpandChange}
                 />
-                <i
+                <LeftChatIcon
                     className="far fa-trash-alt"
                     onClick={this.onDeleteChat}
                 />
-                <i
+                <LeftChatIcon
                     className={"far fa-bell" + (isMuted ? "-slash": "")}
                     onClick={this.onMuteChange}
                 />
-            </li>
+            </RoomItem>
         );
     }
 }

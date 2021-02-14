@@ -1,7 +1,19 @@
 import React, { Component, Fragment } from "react";
 import RoomHeader from "./RoomHeader";
 import ParticipantsList from "./ParticipantsList";
+import styled from "styled-components";
+import { RoomParticipantItem } from "./ChatListItems";
 
+const RoomsWrapper = styled.ul`
+    list-style: none;
+    ${ props => ( !props.isExpanded
+        ? `
+            height: 0;
+            overflow: hidden;
+        `
+        : ``
+    ) }
+`;
 class Room extends Component {
     render() {
         const { id, entities, users, isExpanded, isMuted } = this.props;
@@ -14,15 +26,15 @@ class Room extends Component {
                     isExpanded={isExpanded}
                     isMuted={isMuted}
                 />
-                <ul className={(isExpanded ? "" : "hidden")+" roomsForExpanding"}>
+                <RoomsWrapper isExpanded={ true }>
                     <ParticipantsList
                         users={users}
                         entities={entities}
                         isExpanded={isExpanded}
                         isDownloaded={entities[id].isUsersDownloaded}
                     />
-                    {entities[id].isHistoryDownloadingNow && <li className="item tabbed"><i className="fa fa-sync"></i><span>Загрузка...</span></li>}
-                </ul>
+                    {entities[id].isHistoryDownloadingNow && <RoomParticipantItem><i className="fa fa-sync"></i><span>Загрузка...</span></RoomParticipantItem>}
+                </RoomsWrapper>
             </Fragment>
         );
     }

@@ -1,7 +1,18 @@
 import React, { Component } from "react";
 import Room from "./Room";
 import DirectChat from "./DirectChat";
+import styled from "styled-components";
+import { HeaderItem } from "./ChatListItems";
 
+const ChatListsWrapper = styled.ul`
+    list-style: none;
+`;
+const Header = ({ children }) => (
+    <HeaderItem>
+        <i className="fa fa-list-alt"></i>
+        <span>{ children }</span>
+    </HeaderItem>
+)
 class ChatsList extends Component {
     render() {
         const { rooms, directChats, muted, entities, usersInRooms } = this.props;
@@ -26,18 +37,16 @@ class ChatsList extends Component {
             />
         ));
         return (
-            <ul className="chatListsUl">
-                <li className="item header" key="directChatsHeader">
-                    <i className="fa fa-list-alt"></i>
-                    <span>Прямые чаты</span>
-                </li>
+            <ChatListsWrapper>
+                <Header>
+                    Прямые чаты
+                </Header>
                 { directChatsComponents }
-                <li className="item header" key="roomsHeader">
-                    <i className="fa fa-list-alt"></i>
-                    <span>Комнаты</span>
-                </li>
+                <Header>
+                    Комнаты
+                </Header>
                 { roomsComponents }
-            </ul>
+            </ChatListsWrapper>
         );
     }
 }

@@ -21,6 +21,7 @@ const AvatarContainer = styled.div`
     position: relative;
 
     & > i {
+        color: #82cf85;
         position: absolute;
         top: -2px;
         right: -2px;
@@ -68,6 +69,7 @@ const MyAccountInfo = () => (
             />
             <i className={"fa fa-circle " + "online"}></i>
             {/* TODO: Сделать чтобы можно выбрать свой онлайн и он ставился после задержки: offline, online, idle */}
+            {/* А не просто жёстко зашитый компонент и класс */}
         </AvatarContainer>
         <NameAndStatus>
             <MyAccountName title={getCookie("nickName") || "Error"}>

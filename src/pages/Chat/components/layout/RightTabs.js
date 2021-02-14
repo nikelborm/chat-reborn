@@ -59,6 +59,27 @@ const TabsIcons = styled.ul`
         font-size: 18px
     }
 `;
+// .member-list > li{
+// 	padding: 5px 0;
+// }
+// .member-list > li .status{
+// 	margin: 0 10px 0 0;
+// 	font-size: 14px;
+// }
+// .member-list > li .status.online{
+// 	color: #82cf85;
+// }
+// .member-list > li .status.idle{
+// 	color: #ffac69;
+// }
+// .member-list > li .status.offline{
+// 	color: #f57e7d;
+// }
+// .member-list > li .time{
+// 	float: right;
+// 	font-size: 9px;
+// 	margin-top: 4px;
+// }
 
 // TODO: Сделать нормальные рабочие вкладки и пункты меню
 const RightTabs = () => (
