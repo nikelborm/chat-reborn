@@ -29,9 +29,6 @@ html, body {
 	place-items: center center;
 }
 
-.reversed {
-	transform: rotate(180deg);
-}
 
 ::-webkit-scrollbar-track {
 	background-color: #DBDBDB;
@@ -58,31 +55,4 @@ html, body {
 
 .tippy-tooltip.emoji-theme[data-placement^='bottom'] .tippy-arrow {
     border-bottom-color: rgb(255, 78, 78)
-}
-
-.ReactionButtons button {
-	background: #eee;
-	border: none;
-	font-size: 1rem;
-	padding: 0.5rem 1rem;
-	outline: 0;
-	border-radius: 0.2rem;
-	background: none;
-	font-size: 1.25rem;
-	padding: 0 0.25rem;
-	cursor: pointer;
-}
-
-.ReactionButtons button[data-selected='true'] {
-	background: #eee;
-	border: 1px solid rgba(0, 100, 200, 0.5);
-}
-
-.ReactionButtons .emoji:hover {
-	transform: scale(1.2);
-}
-
-.ReactionButtons .emoji {
-	transition: transform 0.15s;
-	will-change: transform;
 }

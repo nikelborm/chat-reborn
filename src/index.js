@@ -4,6 +4,8 @@ import { BrowserRouter } from "react-router-dom";
 import Chat from "./pages/Chat";
 import "./cleaner.css";
 // import Authorize from "./pages/Authorize";
+import { validateRegistrationPayload } from "./tools/validators";
+console.log(validateRegistrationPayload());
 
 render(
     <div id="app">

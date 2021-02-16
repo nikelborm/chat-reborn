@@ -26,7 +26,7 @@ class Room extends Component {
                     isExpanded={isExpanded}
                     isMuted={isMuted}
                 />
-                <RoomsWrapper isExpanded={ true }>
+                <RoomsWrapper isExpanded={ isExpanded }>
                     <ParticipantsList
                         users={users}
                         entities={entities}

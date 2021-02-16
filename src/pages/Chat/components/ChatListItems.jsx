@@ -51,17 +51,18 @@ export const DirectChatItem = styled( ChatListItem )`
 `;
 
 export const RoomItem = styled( DirectChatItem )`
-    ${ props => ( props.isExpanded
-        ? activeItemStyles + (console.log('props: ', props))
-        : ""
-    ) }
-    & i.fa-angle-down {
+    & i.fa-angle-down, & i.fa-angle-up {
         position: absolute;
         top: 11px;
         right: 41px;
         font-size: 16px;
         font-weight: bold;
     }
+    ${ props => ( props.isExpanded
+        ? activeItemStyles
+        : ""
+    ) }
+
 `;
 
 export const RoomParticipantItem =  styled( ChatListItem )`
