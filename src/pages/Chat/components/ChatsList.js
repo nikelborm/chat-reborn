@@ -31,7 +31,8 @@ class ChatsList extends Component {
                 key={id}
                 id={id}
                 isMuted={muted.has(id)}
-                isExpanded={entities[id].isExpanded}
+                // isExpanded={entities[id].isExpanded}
+                isExpanded={false}
                 entities={entities}
                 users={usersInRooms[id]}
             />

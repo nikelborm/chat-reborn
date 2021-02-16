@@ -10,7 +10,7 @@ class Participant extends PureComponent {
         const { nickName, fullName, onlineStatus } = this.props;
         return (
             <RoomParticipantItem onClick={this.onSelectChat}>
-                <LeftChatIcon onlineStatus={ onlineStatus } className="fa fa-circle-o "/>
+                <LeftChatIcon onlineStatus={ onlineStatus } className="fa fa-circle-o"/>
                 <span title={nickName}>
                     {fullName}
                 </span>

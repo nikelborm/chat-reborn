@@ -19,7 +19,7 @@ class RoomHeader extends PureComponent {
                     {fullName}
                 </span>
                 <LeftChatIcon
-                    className={"fa fa-angle-down" + (isExpanded ? " reversed": "")}
+                    className={"fa fa-angle-" + (isExpanded ? "up": "down")}
                     onClick={this.onExpandChange}
                 />
                 <LeftChatIcon
