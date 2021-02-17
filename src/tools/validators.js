@@ -93,6 +93,7 @@ function validateLoginPayload( payload = {} ) {
 
     return { info, pointerForDisplaing };
 }
+exports.isCorrect = isCorrect;
 exports.validateLoginPayload = validateLoginPayload;
 exports.validateRegistrationPayload = validateRegistrationPayload;
 exports.validateFinishRegistrationPayload = validateFinishRegistrationPayload;
