@@ -2,7 +2,7 @@ function createEmptyResponseData( actiontype = "", actionwhat = "", config = {} 
     // * Создаёт базовый объект ответа на запрос
     // {
     //     "action": {
-    //         "type":        "new"       |            "get"            |        "set"       |   "delete"  |               "respondFor"             |                           "notifyAbout"                     ,
+    //         "type": "new" | "get" | "set" | "delete" | "respondFor" | "notifyAbout" | "start" | "finish" | "auth" | "error",
     //         "what": ("user"|"message") | ("roomsList"|"directChats") | ("newPreferences") | ("message") | ("getdirectChats"|"setnewPreferences") | ("onlineStatusChanged"|"message"|"newPersonArrived"|"error")
     //     },
     //     "payload"?: {},

@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../chat"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../rapidfarm/server"
+		}
+	],
+	"settings": {}
+}

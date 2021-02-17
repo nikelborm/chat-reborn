@@ -1,13 +1,10 @@
 /* eslint-disable default-case */
-const { validate1lvl, validate2lvl } = require("./src/tools/validate");
+const { validate2lvl } = require("./src/tools/validate");
 const { createHardAuthInfo, createLiteAuthInfo } = require("./src/tools/compressAuthInfo");
 const { createEmptyResponseData: createEmptyMessageData } = require("./src/tools/createEmptyResponseData");
 const { randomString } = require("./src/tools/randomString");
-const { isAllStrings } = require("./src/tools/isAllStrings");
-const { fillCookies } = require("./src/tools/fillCookies");
-const { logout } = require("./src/tools/logout");
 const { hasIntersections } = require("./src/tools/intersection");
-const { validateRegistrationPayload, validateFinishRegistrationPayload, validateLoginPayload } = require("./src/tools/validators");
+const { validateRegistrationPayload, validateFinishRegistrationPayload, validateLoginPayload, isCorrect } = require("./src/tools/validators");
 
 const express = require("express");
 const favicon = require("express-favicon");
@@ -27,7 +24,7 @@ const sendmail = require("sendmail")({ silent: true });
 const querystring = require("querystring");
 
 
-function sendItToUsersWhoKnowMe({ rooms, directChats }, message) {
+function sendItToUsersWhoKnowsMe({ rooms, directChats }, message) {
     // * Отправляет сообщение всем пользователям, кто сейчас подключён к вебсокету и кому это сообщение играет хоть какое либо значение,
     // * например онлайн статусы идут тем кто в моих прямых чатах или состоит в одной из моих групп, ведь я потенциально могу его увидеть
     WSServer.clients.forEach(function (client) {
@@ -54,23 +51,27 @@ function sendItToSpecificUser(userID, message) {
         }
     }
 }
-function onCloseWSconnection(myAuthInfo) {
-    const userID = myAuthInfo._id;
-    if (activeUsersCounter[userID] === 1) {
-        delete activeUsersCounter[userID];
-        sendItToUsersWhoKnowMe(myAuthInfo, {handlerType: "offline", userID});
+function notifyFamiliarUsersAboutStatusChangingOfTargetUser( authInfo, newstatus ) {
+    sendItToUsersWhoKnowsMe(authInfo, {handlerType: newstatus,  userID: authInfo._id });
+}
+
+function setUserStatusAsOffline( authInfo ) {
+    const userID = authInfo._id;
+    if ( activeUsersCounter[ userID ] === 1 ) {
+        delete activeUsersCounter[ userID ];
+        notifyFamiliarUsersAboutStatusChangingOfTargetUser( authInfo, "offline" );
     } else {
-        activeUsersCounter[userID]--;
+        activeUsersCounter[ userID ]--;
     }
 }
-function onAccessWSconnection(myAuthInfo) {
-    const userID = myAuthInfo._id;
-    if (!activeUsersCounter[userID]) {
-        activeUsersCounter[userID] = 1;
-        sendItToUsersWhoKnowMe(myAuthInfo, {handlerType: "online", userID});
-        // TODO: Отправить новичку инфу о том кто он?
+
+function setUserStatusAsOnline( authInfo ) {
+    const userID = authInfo._id;
+    if ( !activeUsersCounter[ userID ] ) {
+        activeUsersCounter[ userID ] = 1;
+        notifyFamiliarUsersAboutStatusChangingOfTargetUser( authInfo, "online" );
     } else {
-        activeUsersCounter[userID]++;
+        activeUsersCounter[ userID ]++;
     }
 }
 
@@ -114,6 +115,21 @@ function deleteEntityById(id) {
         console.log(result);
     });
 }
+const sendConfirmationLetter = ( { email, _id, secureToken } ) => new Promise( ( resolve, reject ) => {
+    // TODO: Настроить почтовый сервер, DNS, MX записи, а также SPF, DKIM, DMARC
+    // И всё ради того, чтобы гугл блять не ругался и принимал почту
+    // Тут иногда появляется фантомный баг и какой-нибудь символ (зачастую точка) исчезает из адреса в html
+    sendmail(
+        {
+            from: "robot <noreply@nikel.herokuapp.com>",
+            to: email,
+            subject: "Завершение регистрации",
+            html: `<h2><a href="https://nikel.herokuapp.com/finishRegistration?${ querystring.stringify({id : _id.toString(), secureToken})}">Чтобы завершить регистрацию, перейдите по ссылке</a></h2> `
+        },
+        err => err ? reject( err ) : resolve()
+    );
+} );
+
 const port = process.env.PORT || 3000;
 const mongoLink = process.env.MONGODB_URI || "mongodb://myUserAdmin:0000@localhost:27017/admin";
 const redisLink = process.env.REDIS_URL || "redis://admin:foobared@127.0.0.1:6379";
@@ -159,127 +175,85 @@ app.use(express.static(path.join(__dirname, "build")));
 app.get("/*", (request, response) => {
     response.sendFile(path.join(__dirname, "build", "index.html"));
 });
-
-app.get("/deleteAccount", function(request, response) {
-    // TODO: По такому же принципу построить удаление комнат
-    deleteEntityById(request.session.authInfo._id);
-    logout(request, response);
-});
+// function deleteAccount( connection, body ) {
+//     deleteEntityById( request.session.authInfo._id );
+// }
+// app.get("/deleteAccount", function(request, response) {
+//     // TODO: По такому же принципу построить удаление комнат
+//     deleteEntityById(request.session.authInfo._id);
+//     logout(request, response);
+// });
 // TODO: Добавить шифрование на все поля в базе данных проекта
-app.get("/logout", logout);
+// function logoutUser( connection ) {
+//     setUserStatusAsOffline( connection.authInfo );
+//     connection.authInfo = null;
+//     connection.addListener( "message", authorizationStep );
+//     connection.removeListener( "message", userQueriesHandler );
+// }
+// async function setMeAsLoggedOut( connection, body ) {
+//     let response = createEmptyMessageData( "respondFor", "setMeAsLoggedOut" );
+//     logoutUser( connection );
+//     response.report.isOK = true;
+//     sendMessage( connection, response );
+// }
 
+function getSuccessLoginPayload( authInfo ) {
+    return {
+        nickName: authInfo.nickName,
+        fullName: authInfo.fullName,
+        statusText: authInfo.statusText,
+        avatarLink: authInfo.avatarLink,
+        _id: authInfo._id.toString(),
+    }
+}
 
-async function canIlogin( connection, body ) {
+async function login( connection, body ) {
     const { nickNameOrEmail, password } = body.payload;
 
-    let response = createEmptyMessageData( "respondFor", "setMeAsLoggedIn", { withReport: true, withPayload: true } );
+    let response = createEmptyMessageData( "respondFor", "authlogin", { withReport: true, withPayload: true, withPointer: true } );
     response.report = {
         ...response.report,
         ...validateLoginPayload( body.payload )
     };
 
-    if ( response.report.info ) return sendMessage( connection, response );
+    if ( response.report.info ) return response;
     try {
         const foundUser = await entities.findOne({ isRoom: false, $or: [{ nickName: nickNameOrEmail }, { email: nickNameOrEmail }]});
         if ( !foundUser ) {
             response.report.pointerForDisplaing = "nickNameOrEmail";
             response.report.info = "Пользователь с указанными логином или почтой не найден";
-        } else if (foundUser.password !== sha256( password )) {
+        } else if ( foundUser.password !== sha256( password ) ) {
             response.report.pointerForDisplaing = "passwordLogin";
             response.report.info = "Неверный пароль";
-        } else if (!foundUser.emailConfirmed) {
+        } else if ( !foundUser.emailConfirmed ) {
             response.report.pointerForDisplaing = "nickNameOrEmail";
             response.report.info = "Этот аккаунт не верифицирован. Перейдите по ссылке из нашего письма. Если письма нет даже в папке спам, обратитесь к администратору.";
         }
-        if ( response.report.info ) return sendMessage( connection, response );
+        if ( response.report.info ) return response;
 
         connection.authInfo = foundUser;
-        response.payload = {
-            nickName: foundUser.nickName,
-            fullName: foundUser.fullName,
-            statusText: foundUser.statusText,
-            avatarLink: foundUser.avatarLink,
-            _id: foundUser._id.toString(),
-        };
+        // TODO: Проверить надо ли у _id вызывать .toString() или и без него все прекрасно работает, просто раньше при помещении в сессию этого значения, оно автоматически превращалось в строку, но нут возможно это не прокатит, ведь всё в js крутится
+        response.payload = getSuccessLoginPayload( foundUser );
         response.report.isOK = true;
     } catch ( error ) {
         console.log( "error: ", error );
         response.report.info = "Произошла неизвестная ошибка на сервере. Сообщите администратору и повторите попытку войти в аккаунт позже.";
     }
-    sendMessage( connection, response );
+    return response;
 }
-
-// TODO: В самом начале добавить валидатор на соответствие сообщения общепринятому в проекте формату
-async function finishRegistration( connection, body ) {
-    const { secureToken, id } = body.payload;
-
-    let response = createEmptyMessageData( "respondFor", "setRegistrationAsFinished", { withReport: true, withPayload: true } );
-    response.report = {
-        ...response.report,
-        ...validateFinishRegistrationPayload( body.payload )
-    };
-
-    if ( response.report.info ) return sendMessage( connection, response );
-
-    try {
-        const _id = new ObjectId( id );
-        const updatingResult = entities.findOneAndUpdate(
-            { isRoom: false, _id, secureToken },
-            {
-                // $addToSet: { rooms: тут можно добавить что-нибудь к любому массиву },
-                $set: {
-                    secureToken : randomString( 32 ),
-                    emailConfirmed: true
-                }
-            },
-            { returnOriginal: false }
-        );
-        if ( !updatingResult ) {
-            response.report.info = "Данное сочетание ключа и айди больше не работает."
-            return sendMessage( connection, response );
-        }
-        connection.authInfo = updatingResult;
-        response.payload = {
-            nickName: updatingResult.nickName,
-            fullName: updatingResult.fullName,
-            statusText: updatingResult.statusText,
-            avatarLink: updatingResult.avatarLink,
-            _id: updatingResult._id.toString(),
-        };
-    } catch ( error ) {
-        console.log( "error: ", error );
-        response.report.info = "Произошла неизвестная ошибка на сервере. Сообщите администратору и повторите попытку верифицировать аккаунт позже.";
-    }
-    sendMessage( connection, response );
-}
-
-const sendConfirmationLetter = ( { email, _id, secureToken } ) => new Promise( ( resolve, reject ) => {
-    // TODO: Настроить почтовый сервер, DNS, MX записи, а также SPF, DKIM, DMARC
-    // И всё ради того, чтобы гугл блять не ругался и принимал почту
-    // Тут иногда появляется фантомный баг и какой-нибудь символ (зачастую точка) исчезает из адреса в html
-    sendmail(
-        {
-            from: "robot <noreply@nikel.herokuapp.com>",
-            to: email,
-            subject: "Завершение регистрации",
-            html: `<h2><a href="https://nikel.herokuapp.com/finishRegistration?${ querystring.stringify({id : _id.toString(), secureToken})}">Чтобы завершить регистрацию, перейдите по ссылке</a></h2> `
-        },
-        err => err ? reject( err ) : resolve()
-    );
-} );
 
 // TODO: Поправить всё, что связано с аватаром пользователя, так как обновилось в базе данных
-async function canIregister( connection, body ) {
+async function register( connection, body ) {
     const { nickName, password, fullName, email } = body.payload;
 
-    let response = createEmptyMessageData( "respondFor", "newUser", { withReport: true, withPointer: true } );
+    let response = createEmptyMessageData( "respondFor", "authregister", { withReport: true, withPointer: true } );
     response.report = { ...response.report, ...validateRegistrationPayload( body.payload ) };
 
-    if ( response.report.info ) return sendMessage( connection, response );
+    if ( response.report.info ) return response;
     const userProfile = {
         isRoom: false,
         nickName,
-        password: sha256(password),
+        password: sha256( password ),
         email,
         fullName,
         regDate: new Date(),
@@ -292,6 +266,7 @@ async function canIregister( connection, body ) {
         rooms: [],
         directChats: [],
         muted: [],
+        // TODO: Использовать более безопасный вариант генерации случайности
         secureToken: randomString(32),
         emailConfirmed: false
     };
@@ -325,48 +300,298 @@ async function canIregister( connection, body ) {
         console.log( "error: ", error );
         response.report.info = "Произошла неизвестная ошибка на сервере. Сообщите администратору и повторите попытку создать аккаунт позже.";
     }
-    sendMessage( connection, response );
-};
+    return response;
+}
 
+async function confirmEmail( connection, body ) {
+    const { secureToken, id } = body.payload;
+
+    let response = createEmptyMessageData( "respondFor", "authconfirmEmail", { withReport: true, withPayload: true } );
+    response.report = {
+        ...response.report,
+        ...validateFinishRegistrationPayload( body.payload )
+    };
+
+    if ( response.report.info ) return response;
+
+    try {
+        const _id = new ObjectId( id );
+        const updatingResult = entities.findOneAndUpdate(
+            { isRoom: false, _id, secureToken },
+            {
+                // $addToSet: { rooms: тут можно добавить что-нибудь к любому массиву },
+                $set: {
+                    // TODO: Использовать более безопасный вариант генерации случайности
+                    secureToken : randomString( 32 ),
+                    emailConfirmed: true
+                }
+            },
+            { returnOriginal: false }
+        );
+        if ( !updatingResult ) { // TODO: Эта фигня расчитана на то, что если документ не найден то ничего обновляться не будет и вернётся что-то типа null, но это утверждение не проверялось и надо проверить так ли это, а то мало ли, вдруг оно ошибку кинет
+            response.report.info = "Данное сочетание ключа и айди больше не работает."
+            return response;
+        }
+        connection.authInfo = updatingResult;
+        // TODO: Проверить надо ли у _id вызывать .toString() или и без него все прекрасно работает, просто раньше при помещении в сессию этого значения, оно автоматически превращалось в строку, но нут возможно это не прокатит, ведь всё в js крутится
+        response.payload = getSuccessLoginPayload( updatingResult );
+    } catch ( error ) {
+        console.log( "error: ", error );
+        response.report.info = "Произошла неизвестная ошибка на сервере. Сообщите администратору и повторите попытку верифицировать аккаунт позже.";
+    }
+    return response;
+}
+
+async function unexpectedActionHandler( connection, body ) {
+    let response = createEmptyMessageData( "respondFor", body.action.type + body.action.what, { withReport: true } );
+    response.report.info = `Вы запросили несуществующий обработчик для ${ body.action.what } типа ${ body.action.type }`;
+    return response;
+}
 // TODO: Добавить восстановление аккаунта по почте
 // TODO: Добавить функцию добавления комнаты или юзера в чёрный список по id-шнику естественно
 const server = http.createServer(app);
-const WSServer = new WebSocket.Server({
+const WSServer = new WebSocket.Server( {
     server
-});
-
-
-
-async function canIregister
-WSServer.on("connection", (connection, request) => {
-    connection.on("close", () => {
-        onCloseWSconnection(connection.authInfo);
-    });
-    connection.isAlive = true;
-    const cookies = cookie.parse(request.headers.cookie);
-    const sid = "" + cookieParser.signedCookie(cookies["connect.sid"], secretKey);
-    // TODO: Подумать над тем, что сообщение может начать обрабатываться до то того как редис вернёт запись для валидации
-    store.get(sid, (err, session) => {
-        if (err) console.log(err);
-
-        if (!session || !session.authInfo || err) {
-            let { resdata, rp } = createEmptyMessageData();
-            rp.info = "Вы не авторизованы!";
-            connection.send(JSON.stringify(resdata));
-            connection.terminate();
+} );
+function beforeAuthorizationHandlersSwitcher( what ) {
+    // type: auth
+    const variants = {
+        login,
+        register,
+        confirmEmail,
+        // requestPasswordRestoring,
+        // confirmPasswordRestoring,
+    };
+    return what in variants ? variants[ what ] : unexpectedActionHandler;
+}
+function afterAuthorizationHandlersSwitcher( type ) {
+    // TODO: Такая же хуйня как и выше
+}
+function prepare( input ) {
+    let body;
+    let info;
+    let isOK;
+    try {
+        body = JSON.parse( input.toString() );
+        if (
+            typeof body === "object" &&
+            "action" in body &&
+            typeof body.action === "object" &&
+            "type" in body.action &&
+            isCorrect( body.action.type ) &&
+            "what" in body.action &&
+            isCorrect( body.action.what )
+        ) {
+            isOK = true;
         } else {
-            const { rooms, directChats, ...rest } = session.authInfo;
-            connection.authInfo = {
-                ...rest,
-                rooms: new Set(rooms),
-                directChats: new Set(directChats)
-            };
-            onAccessWSconnection(connection.authInfo);
+            info = "Некорректная структура запроса: " + input.toString();
+        }
+    } catch ( error ) {
+        info = "Ошибка при парсинге JSON запроса: " + input.toString();
+        console.log( "error: ", error );
+    }
+    return { isOK, info, body };
+}
+// TODO: В самом начале добавить валидатор на соответствие сообщения общепринятому в проекте формату
+WSServer.on("connection", (connection, request) => {
+    connection.isAlive = true;
+    connection.on( "pong", () => {
+        connection.isAlive = true;
+    } );
+    const authorizationStep = async (input) => {
+        const data = prepare( input , connection );
+        if( !data ) return;
+        if ( data.class === "logout" ) return;
+        if(!["loginAsFarm","loginAsUser","registerAsUser","set","execute"].includes( data.class )) return;
+        sendMessage(connection, {
+            class: data.class,
+            ...(await handlerSwitcher( data.class )( connection, data )),
+        });
+        if (connection.isAuthAsFarm) {
+            // if ( !farmConnection ) farmConnection = connection;
+            // Потому что если новое соединение с фермой установилось до того, как старое порвалось, надо установить новое
+            farmConnection = connection;
+            // TODO: connection.addEventListener("close")
+            // Потому что cleaner обрабатывает только случайные обрывы связи
+            newFarmStateNotifier();
+            connection.removeListener("message", authorizationStep);
+            connection.addListener("message", farmQueriesHandler);
+            connection.addListener("message", logout);
+        }
+        if (connection.isAuthAsUser) {
+            connection.removeListener("message", authorizationStep);
+            connection.addListener("message", userQueriesHandler);
+            connection.addListener("message", logout);
+        }
+    }
+    const publicQueriesHandler = (input) => {
+        // TODO: Подумать над обработкой и защитой от ошибок в JSON.parse
+        const data = prepare( input , connection );
+        if( !data ) return;
+        //* Пользовательские запросы которые можно обработать и без авторизации
+        if ( data.class !== "get" ) return;
+        switch ( data.what ) {
+            case "activitySyncPackage":
+                sendActivityPackage( connection );
+                break;
+            case "configPackage":
+                sendConfigPackage( connection );
+                break;
+            case "recordsPackage":
+                sendRecordsPackage( connection );
+                break;
+            case "exactSensorRecordsPackage":
+                sendExactSensorRecordsPackage( connection, data.sensor );
+                break;
+            case "newestRecordsPackage":
+                sendNewestRecordsPackage( connection );
+                break;
+            default:
+                sendError(connection, `Обработчика what (${data.what}) для class (${data.class}) не существует`);
+        }
+    };
+    const farmQueriesHandler = (input) => {
+        const data = prepare( input , connection );
+        if( !data ) return;
+        switch ( data.class ) {
+            case "event":
+                // просто переслать всем онлайн пользователям
+                sendToUsers( data );
+                cachedProcessStates[ data.process ] = data.isActive;
+                break;
+            case "warning":
+                // переслать всем онлайн пользователям и уведомить их ещё как-то
+                // по почте, через пуш уведомления, в слак, в вк, в телегу, в дискорд
+                break; // records по действиям похожи
+            case "records":
+                // переслать всем онлайн пользователям и сохранить в бд с датой
+                const log = {
+                    sensor: data.sensor,
+                    value: data.value,
+                    date: new Date()
+                };
+                sendToUsers( { ...log, class: "records" } );
+                sensorsLogs.insertOne( log );
+                break;
+            case "activitySyncPackage":
+                cachedProcessStates = data.package;
+                sendToUsers({ class: "activitySyncPackage", package: cachedProcessStates });
+                break;
+            case "configPackage":
+                cachedConfig = data.package;
+                sendToUsers({ class: "configPackage", package: cachedConfig });
+                break;
+            default:
+                break;
+        }
+    };
+    const userQueriesHandler = (input) => {
+        const data = prepare( input , connection );
+        if( !data ) return;
+        switch ( data.class ) {
+            case "set":
+                switch ( data.what ) {
+                    case "timings":
+                        // А, если нет соединения, то добавить в очередь отложенных запросов к ферме
+                        sendToUsers( {
+                            class : "timings",
+                            process: data.process,
+                            timings: data.timings
+                        } );
+                        !!farmConnection && sendMessage( farmConnection, data );
+                        for ( const proc of cachedConfig.processes ) {
+                            if ( proc.long === data.process ) {
+                                proc.timings = data.timings;
+                                break;
+                            }
+                        }
+                        break;
+                    case "criticalBorders":
+                        sendToUsers( {
+                            class : "criticalBorders",
+                            sensor: data.sensor,
+                            criticalBorders: data.criticalBorders
+                        } );
+                        !!farmConnection && sendMessage( farmConnection, data );
+                        for ( const sensor of cachedConfig.sensors ) {
+                            if ( sensor.long === data.sensor ) {
+                                sensor.criticalBorders = data.criticalBorders;
+                                break;
+                            }
+                        }
+                        break;
+                    case "config":
+                        sendToUsers( data );
+                        !!farmConnection && sendMessage( farmConnection, data );
+                        cachedConfig = data.config;
+                        break;
+                    default:
+                        sendError(connection, `Обработчика what (${data.what}) для class (${data.class}) не существует`);
+                }
+                break;
+            case "execute":
+                switch ( data.what ) {
+                    case "bashCommand":
+                        sendMessage( farmConnection, {
+                            class: "execute",
+                            what: "bashCommand",
+                            bashCommand: data.command,
+                            replyTo: connection.authInfo.email
+                        } );
+                        break;
+                    case "update":
+                    case "shutDownFarm":
+                    case "updateArduino":
+                        farmConnection.send( input );
+                        break;
+                    default:
+                        sendError(connection, `Обработчика what (${data.what}) для class (${data.class}) не существует`);
+                }
+                break;
+            default:
+                break;
+        }
+    };
+    const logout = (input) => {
+        const data = prepare( input , connection );
+        if( !data ) return;
+        if ( data.class !== "logout" ) return;
+        if ( connection.isAuthAsFarm ) {
+            farmConnection = null;
+            newFarmStateNotifier();
+            connection.isAuthAsFarm = false;
+            connection.name = "";
+            connection.addListener( "message", authorizationStep );
+            connection.removeListener( "message", farmQueriesHandler );
+        }
+        if ( connection.isAuthAsUser ) {
+            connection.isAuthAsUser = false;
+            connection.authInfo = null;
+            connection.addListener( "message", authorizationStep );
+            connection.removeListener( "message", userQueriesHandler );
+        }
+        sendMessage( connection, { class: "logout" } );
+    };
+    connection.addListener("message", function (input) {
+        try {
+            console.log("Пришло в ws: ", JSON.parse( input.toString() ));
+        } catch (error) {
+            console.log("Ошибка при парсинге в JSON, ws on message : ", input);
         }
     });
+    connection.addListener("message", authorizationStep);
+    connection.addListener("message", publicQueriesHandler);
+    sendFarmState( connection );
+});
+
+WSServer.on("connection", (connection, request) => {
+    connection.isAlive = true;
     connection.on("pong", () => {
         connection.isAlive = true;
     });
+    connection.on( "close", () => {
+        connection.authInfo && setUserStatusAsOffline( connection.authInfo );
+    } );
     connection.on("message", async (input) => {
         const { authInfo } = connection;
         // TODO: Проверять не слишком ли большие данные, чтобы долго их не обрабатывать
@@ -484,7 +709,7 @@ const cleaner = setInterval(() => {
     WSServer.clients.forEach((connection) => {
         // Если соединение мертво, завершить
         if (!connection.isAlive) {
-            onCloseWSconnection(connection.authInfo);
+            setUserStatusAsOffline(connection.authInfo);
             return connection.terminate();
         }
         // обьявить все соединения мертвыми, а тех кто откликнется на ping, сделать живыми
