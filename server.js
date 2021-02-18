@@ -353,357 +353,220 @@ const server = http.createServer(app);
 const WSServer = new WebSocket.Server( {
     server
 } );
-function beforeAuthorizationHandlersSwitcher( what ) {
-    // type: auth
-    const variants = {
+const beforeAuthHandlers = {
+    auth: {
         login,
         register,
         confirmEmail,
         // requestPasswordRestoring,
         // confirmPasswordRestoring,
-    };
-    return what in variants ? variants[ what ] : unexpectedActionHandler;
+    },
+};
+
+const afterAuthHandlers = {
+    get : {
+        // listofusersmathedtoparams
+    },
+    set : {},
+    start: {}
+    // logout,
+};
+
+function getHandlerMatchedToAction( action, variants ) {
+    if( !( action.type in variants ) ) return unexpectedActionHandler;
+    const typebranch = variants[ action.type ];
+    const what = typeof typebranch === "function"
+        ? ( action.what === ""
+            ? typebranch
+            : unexpectedActionHandler
+        )
+        : ( action.what in typebranch
+            ? typebranch[ action.what ]
+            : unexpectedActionHandler
+        )
+    return action.type in variants ? variants[ what ] : unexpectedActionHandler;
 }
-function afterAuthorizationHandlersSwitcher( type ) {
-    // TODO: Такая же хуйня как и выше
-}
-function prepare( input ) {
+
+function validateAndPrepareInputData( input ) {
     let body;
-    let info;
-    let isOK;
+    let info = "";
+    let isOK = false;
     try {
+        // TODO: Подумать над защитой от слишком большого текста
         body = JSON.parse( input.toString() );
         if (
+            // TODO: Подумать над улучшением валидатора
             typeof body === "object" &&
-            "action" in body &&
             typeof body.action === "object" &&
-            "type" in body.action &&
-            isCorrect( body.action.type ) &&
-            "what" in body.action &&
-            isCorrect( body.action.what )
+            typeof body.action.type === "string" && body.action.type.length &&
+            typeof body.action.what === "string" &&
+            ( typeof body.payload === "undefined" ) !== ( typeof body.payload === "object" ) &&
+            ( typeof body.report  === "undefined" ) !== (
+                typeof body.report  === "object" &&
+                typeof body.report.isOK === "boolean" &&
+                typeof body.report.info === "string" &&
+                ( typeof body.report.pointerForDisplaing === "undefined" ) !== (
+                    typeof body.report.pointerForDisplaing === "string" &&
+                    body.report.pointerForDisplaing.length
+                ) &&
+                ( typeof body.report.errorType === "undefined" ) !== (
+                    typeof body.report.errorType === "string" &&
+                    body.report.errorType.length
+                )
+            )
         ) {
             isOK = true;
+            console.log( "В сокет пришло: ", body );
         } else {
             info = "Некорректная структура запроса: " + input.toString();
+            console.log( "Некорректная структура запроса: ", body );
         }
     } catch ( error ) {
         info = "Ошибка при парсинге JSON запроса: " + input.toString();
+        console.log( info );
         console.log( "error: ", error );
     }
     return { isOK, info, body };
 }
+
 // TODO: В самом начале добавить валидатор на соответствие сообщения общепринятому в проекте формату
 WSServer.on("connection", (connection, request) => {
     connection.isAlive = true;
     connection.on( "pong", () => {
         connection.isAlive = true;
     } );
-    const authorizationStep = async (input) => {
-        const data = prepare( input , connection );
-        if( !data ) return;
-        if ( data.class === "logout" ) return;
-        if(!["loginAsFarm","loginAsUser","registerAsUser","set","execute"].includes( data.class )) return;
-        sendMessage(connection, {
-            class: data.class,
-            ...(await handlerSwitcher( data.class )( connection, data )),
-        });
-        if (connection.isAuthAsFarm) {
-            // if ( !farmConnection ) farmConnection = connection;
-            // Потому что если новое соединение с фермой установилось до того, как старое порвалось, надо установить новое
-            farmConnection = connection;
-            // TODO: connection.addEventListener("close")
-            // Потому что cleaner обрабатывает только случайные обрывы связи
-            newFarmStateNotifier();
-            connection.removeListener("message", authorizationStep);
-            connection.addListener("message", farmQueriesHandler);
-            connection.addListener("message", logout);
-        }
-        if (connection.isAuthAsUser) {
-            connection.removeListener("message", authorizationStep);
-            connection.addListener("message", userQueriesHandler);
-            connection.addListener("message", logout);
-        }
-    }
-    const publicQueriesHandler = (input) => {
-        // TODO: Подумать над обработкой и защитой от ошибок в JSON.parse
-        const data = prepare( input , connection );
-        if( !data ) return;
-        //* Пользовательские запросы которые можно обработать и без авторизации
-        if ( data.class !== "get" ) return;
-        switch ( data.what ) {
-            case "activitySyncPackage":
-                sendActivityPackage( connection );
-                break;
-            case "configPackage":
-                sendConfigPackage( connection );
-                break;
-            case "recordsPackage":
-                sendRecordsPackage( connection );
-                break;
-            case "exactSensorRecordsPackage":
-                sendExactSensorRecordsPackage( connection, data.sensor );
-                break;
-            case "newestRecordsPackage":
-                sendNewestRecordsPackage( connection );
-                break;
-            default:
-                sendError(connection, `Обработчика what (${data.what}) для class (${data.class}) не существует`);
-        }
-    };
-    const farmQueriesHandler = (input) => {
-        const data = prepare( input , connection );
-        if( !data ) return;
-        switch ( data.class ) {
-            case "event":
-                // просто переслать всем онлайн пользователям
-                sendToUsers( data );
-                cachedProcessStates[ data.process ] = data.isActive;
-                break;
-            case "warning":
-                // переслать всем онлайн пользователям и уведомить их ещё как-то
-                // по почте, через пуш уведомления, в слак, в вк, в телегу, в дискорд
-                break; // records по действиям похожи
-            case "records":
-                // переслать всем онлайн пользователям и сохранить в бд с датой
-                const log = {
-                    sensor: data.sensor,
-                    value: data.value,
-                    date: new Date()
-                };
-                sendToUsers( { ...log, class: "records" } );
-                sensorsLogs.insertOne( log );
-                break;
-            case "activitySyncPackage":
-                cachedProcessStates = data.package;
-                sendToUsers({ class: "activitySyncPackage", package: cachedProcessStates });
-                break;
-            case "configPackage":
-                cachedConfig = data.package;
-                sendToUsers({ class: "configPackage", package: cachedConfig });
-                break;
-            default:
-                break;
-        }
-    };
-    const userQueriesHandler = (input) => {
-        const data = prepare( input , connection );
-        if( !data ) return;
-        switch ( data.class ) {
-            case "set":
-                switch ( data.what ) {
-                    case "timings":
-                        // А, если нет соединения, то добавить в очередь отложенных запросов к ферме
-                        sendToUsers( {
-                            class : "timings",
-                            process: data.process,
-                            timings: data.timings
-                        } );
-                        !!farmConnection && sendMessage( farmConnection, data );
-                        for ( const proc of cachedConfig.processes ) {
-                            if ( proc.long === data.process ) {
-                                proc.timings = data.timings;
-                                break;
-                            }
-                        }
-                        break;
-                    case "criticalBorders":
-                        sendToUsers( {
-                            class : "criticalBorders",
-                            sensor: data.sensor,
-                            criticalBorders: data.criticalBorders
-                        } );
-                        !!farmConnection && sendMessage( farmConnection, data );
-                        for ( const sensor of cachedConfig.sensors ) {
-                            if ( sensor.long === data.sensor ) {
-                                sensor.criticalBorders = data.criticalBorders;
-                                break;
-                            }
-                        }
-                        break;
-                    case "config":
-                        sendToUsers( data );
-                        !!farmConnection && sendMessage( farmConnection, data );
-                        cachedConfig = data.config;
-                        break;
-                    default:
-                        sendError(connection, `Обработчика what (${data.what}) для class (${data.class}) не существует`);
-                }
-                break;
-            case "execute":
-                switch ( data.what ) {
-                    case "bashCommand":
-                        sendMessage( farmConnection, {
-                            class: "execute",
-                            what: "bashCommand",
-                            bashCommand: data.command,
-                            replyTo: connection.authInfo.email
-                        } );
-                        break;
-                    case "update":
-                    case "shutDownFarm":
-                    case "updateArduino":
-                        farmConnection.send( input );
-                        break;
-                    default:
-                        sendError(connection, `Обработчика what (${data.what}) для class (${data.class}) не существует`);
-                }
-                break;
-            default:
-                break;
-        }
-    };
-    const logout = (input) => {
-        const data = prepare( input , connection );
-        if( !data ) return;
-        if ( data.class !== "logout" ) return;
-        if ( connection.isAuthAsFarm ) {
-            farmConnection = null;
-            newFarmStateNotifier();
-            connection.isAuthAsFarm = false;
-            connection.name = "";
-            connection.addListener( "message", authorizationStep );
-            connection.removeListener( "message", farmQueriesHandler );
-        }
-        if ( connection.isAuthAsUser ) {
-            connection.isAuthAsUser = false;
-            connection.authInfo = null;
-            connection.addListener( "message", authorizationStep );
-            connection.removeListener( "message", userQueriesHandler );
-        }
-        sendMessage( connection, { class: "logout" } );
-    };
-    connection.addListener("message", function (input) {
-        try {
-            console.log("Пришло в ws: ", JSON.parse( input.toString() ));
-        } catch (error) {
-            console.log("Ошибка при парсинге в JSON, ws on message : ", input);
-        }
-    });
-    connection.addListener("message", authorizationStep);
-    connection.addListener("message", publicQueriesHandler);
-    sendFarmState( connection );
-});
-
-WSServer.on("connection", (connection, request) => {
-    connection.isAlive = true;
-    connection.on("pong", () => {
-        connection.isAlive = true;
-    });
     connection.on( "close", () => {
         connection.authInfo && setUserStatusAsOffline( connection.authInfo );
     } );
-    connection.on("message", async (input) => {
-        const { authInfo } = connection;
-        // TODO: Проверять не слишком ли большие данные, чтобы долго их не обрабатывать
-        const { handlerType, room, text, to } = JSON.parse(input.toString());
-        console.log('Пришло в ws: ', JSON.parse(input.toString()));
-        let { resdata, rp } = validate2lvl(handlerType === "message" ? { to, text } : { room }, authInfo);
-        resdata.handlerType = handlerType;
-
-        if (rp.info) return connection.send(JSON.stringify(resdata));
-
-        switch (handlerType) {
-            case "message":
-                let message = {
-                    to,
-                    authorID: authInfo.nickName,
-                    text,
-                    time: new Date()
-                };
-                try {
-                    const result = await entities.findOne({ _id: new ObjectId(to)});
-                    if (!result) {
-                        throw new Error("Чат не найден.");
-                    }
-                    message.isDirect = !result.isRoom;
-                    if (result.isRoom && !authInfo.rooms.has(to)) {
-                        throw new Error("У вас нет прав для отправки сообщения в эту комнату.");
-                    }
-                    if (!result.isRoom && !authInfo.directChats.has(to)) {
-                        // TODO: Вызвать функцию, которая добавит id-шники обоим собеседникам в свои directChats в БД, в cессию, в connection и отправит уведомления этим двум пользователям
-                    }
-
-                    const msgID = (await messages.insertOne(message)).ops[0]._id;
-                    rp.info = "Сообщение успешно отправлено";
-                    rp.isError = false;
-                    resdata.reply = { msgID };
-
-                    WSServer.clients.forEach(function (client) {
-                        if (client.authInfo.rooms.has(room)) {
-                            client.send(JSON.stringify({handlerType: "message", msgID, ...message}));
-                        }
-                    });
-                } catch (err) {
-                    console.log(err);
-                    rp.info = err.message;
-                }
-                connection.send(JSON.stringify(resdata));
-                break;
-            case "loadSpecificChatHistory":
-                messages.find({ room }, { projection: {room: 0} })
-                .toArray((err, results) => {
-                    if (err) {
-                        rp.info = err.message;
-                        console.log(err);
-                    } else {
-                        resdata.reply = { room, results };
-                        rp.isError = false;
-                        rp.info = "Данные успешно загружены";
-                    }
-                    connection.send(JSON.stringify(resdata));
-                });
-                break;
-            case "loadListOfUsersInChat":
-                let results = {};
-                entities.find({rooms: room}, {projection: { nickName:1, fullName:1 }})
-                .forEach(
-                    (doc) => {
-                        const { user, id } = createLiteAuthInfo(doc, activeUsersCounter);
-                        results[id] = user;
-                    },
-                    function (err) {
-                        if (err) {
-                            console.log(err);
-                            rp.info = err;
-                        } else {
-                            resdata.reply = { room, results };
-                            rp.isError = false;
-                            rp.info = "Данные успешно загружены";
-                        }
-                        connection.send(JSON.stringify(resdata));
-                    }
-                );
-                break;
-            case "canIjoinTheRoom":
-                // TODO: Добавить оповещение всех онлайновых, кто в одном чате о присоединении новичка
-                // TODO: Сделать защиту, чтобы имя комнаты не было каким-нибудь ебанутым типа constructor, __proto__ или this
-
-                // notifyAboutNewUserInRoom(authInfo, roomID);
-                // const { user, id } = createHardAuthInfo(newAuthInfo, activeUsersCounter);
-                // WSServer.clients.forEach(function (client) {
-                //     if (client.authInfo.rooms.has(room)) {
-                //         client.send(JSON.stringify({handlerType: "newUserInRoom", userID: id, user, roomID: }));
-                //     }
-                // });
-                break;
-            case "loadFilteredAuthInfoData":
-                // TODO: обязательно проверять а знаком ли этот пользователь со вторым (хотя над этим ещё подумать надо)
-                // Здесь загружается полная инфа о пользователе
-                resdata.reply = createHardAuthInfo(authInfo, activeUsersCounter);
-                connection.send(JSON.stringify(resdata));
-                break;
-            case "loadListOfDirectChats":
-                // TODO: Загрузить список прямых чатов
-                // Здесь загружается список всех прямых чатов с друзьями запрашивающего
-                break;
-            case "loadListOfMyRooms":
-                // TODO: загружать список именно комнат в которых я состою
-                break;
-            case "loadStartupData":
-                // TODO: loadListOfDirectChats, loadListOfMyRooms, loadFilteredAuthInfoDataOfMe
+    connection.addListener( "message", async function ( input ) {
+        const { isOK, info, body } = validateAndPrepareInputData( input );
+        if( !isOK ) {
+            let response = createEmptyMessageData( "error", "", { withReport: true } );
+            response.report.info = info;
+            return;
         }
+        const { authInfo } = connection;
+        sendMessage(
+            connection,
+            await getHandlerMatchedToAction(
+                body,
+                authInfo ? afterAuthHandlers : beforeAuthHandlers
+            )( connection, body )
+        );
     });
 });
+
+//     connection.on("message", async (input) => {
+//         // TODO: Проверять не слишком ли большие данные, чтобы долго их не обрабатывать
+//         const { handlerType, room, text, to } = JSON.parse(input.toString());
+//         console.log('Пришло в ws: ', JSON.parse(input.toString()));
+//         let { resdata, rp } = validate2lvl(handlerType === "message" ? { to, text } : { room }, authInfo);
+//         resdata.handlerType = handlerType;
+
+//         if (rp.info) return connection.send(JSON.stringify(resdata));
+
+//         switch (handlerType) {
+//             case "message":
+//                 let message = {
+//                     to,
+//                     authorID: authInfo.nickName,
+//                     text,
+//                     time: new Date()
+//                 };
+//                 try {
+//                     const result = await entities.findOne({ _id: new ObjectId(to)});
+//                     if (!result) {
+//                         throw new Error("Чат не найден.");
+//                     }
+//                     message.isDirect = !result.isRoom;
+//                     if (result.isRoom && !authInfo.rooms.has(to)) {
+//                         throw new Error("У вас нет прав для отправки сообщения в эту комнату.");
+//                     }
+//                     if (!result.isRoom && !authInfo.directChats.has(to)) {
+//                         // TODO: Вызвать функцию, которая добавит id-шники обоим собеседникам в свои directChats в БД, в cессию, в connection и отправит уведомления этим двум пользователям
+//                     }
+
+//                     const msgID = (await messages.insertOne(message)).ops[0]._id;
+//                     rp.info = "Сообщение успешно отправлено";
+//                     rp.isError = false;
+//                     resdata.reply = { msgID };
+
+//                     WSServer.clients.forEach(function (client) {
+//                         if (client.authInfo.rooms.has(room)) {
+//                             client.send(JSON.stringify({handlerType: "message", msgID, ...message}));
+//                         }
+//                     });
+//                 } catch (err) {
+//                     console.log(err);
+//                     rp.info = err.message;
+//                 }
+//                 connection.send(JSON.stringify(resdata));
+//                 break;
+//             case "loadSpecificChatHistory":
+//                 messages.find({ room }, { projection: {room: 0} })
+//                 .toArray((err, results) => {
+//                     if (err) {
+//                         rp.info = err.message;
+//                         console.log(err);
+//                     } else {
+//                         resdata.reply = { room, results };
+//                         rp.isError = false;
+//                         rp.info = "Данные успешно загружены";
+//                     }
+//                     connection.send(JSON.stringify(resdata));
+//                 });
+//                 break;
+//             case "loadListOfUsersInChat":
+//                 let results = {};
+//                 entities.find({rooms: room}, {projection: { nickName:1, fullName:1 }})
+//                 .forEach(
+//                     (doc) => {
+//                         const { user, id } = createLiteAuthInfo(doc, activeUsersCounter);
+//                         results[id] = user;
+//                     },
+//                     function (err) {
+//                         if (err) {
+//                             console.log(err);
+//                             rp.info = err;
+//                         } else {
+//                             resdata.reply = { room, results };
+//                             rp.isError = false;
+//                             rp.info = "Данные успешно загружены";
+//                         }
+//                         connection.send(JSON.stringify(resdata));
+//                     }
+//                 );
+//                 break;
+//             case "canIjoinTheRoom":
+//                 // TODO: Добавить оповещение всех онлайновых, кто в одном чате о присоединении новичка
+//                 // TODO: Сделать защиту, чтобы имя комнаты не было каким-нибудь ебанутым типа constructor, __proto__ или this
+
+//                 // notifyAboutNewUserInRoom(authInfo, roomID);
+//                 // const { user, id } = createHardAuthInfo(newAuthInfo, activeUsersCounter);
+//                 // WSServer.clients.forEach(function (client) {
+//                 //     if (client.authInfo.rooms.has(room)) {
+//                 //         client.send(JSON.stringify({handlerType: "newUserInRoom", userID: id, user, roomID: }));
+//                 //     }
+//                 // });
+//                 break;
+//             case "loadFilteredAuthInfoData":
+//                 // TODO: обязательно проверять а знаком ли этот пользователь со вторым (хотя над этим ещё подумать надо)
+//                 // Здесь загружается полная инфа о пользователе
+//                 resdata.reply = createHardAuthInfo(authInfo, activeUsersCounter);
+//                 connection.send(JSON.stringify(resdata));
+//                 break;
+//             case "loadListOfDirectChats":
+//                 // TODO: Загрузить список прямых чатов
+//                 // Здесь загружается список всех прямых чатов с друзьями запрашивающего
+//                 break;
+//             case "loadListOfMyRooms":
+//                 // TODO: загружать список именно комнат в которых я состою
+//                 break;
+//             case "loadStartupData":
+//                 // TODO: loadListOfDirectChats, loadListOfMyRooms, loadFilteredAuthInfoDataOfMe
+//         }
+//     });
+// });
 const cleaner = setInterval(() => {
     // Проверка на то, оставлять ли соединение активным
     WSServer.clients.forEach((connection) => {
