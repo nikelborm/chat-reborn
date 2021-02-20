@@ -1,10 +1,8 @@
 /* eslint-disable default-case */
-const { validate2lvl } = require("./src/tools/validate");
-const { createHardAuthInfo, createLiteAuthInfo } = require("./src/tools/compressAuthInfo");
 const { createEmptyResponseData: createEmptyMessageData } = require("./src/tools/createEmptyResponseData");
 const { randomString } = require("./src/tools/randomString");
 const { hasIntersections } = require("./src/tools/intersection");
-const { validateRegistrationPayload, validateFinishRegistrationPayload, validateLoginPayload, isCorrect } = require("./src/tools/validators");
+const { validateRegistrationPayload, validateFinishRegistrationPayload, validateLoginPayload, validateNewMessagePayload } = require("./src/tools/validators");
 
 const express = require("express");
 const favicon = require("express-favicon");
@@ -28,7 +26,7 @@ function sendItToUsersWhoKnowsMe({ rooms, directChats }, message) {
     // * Отправляет сообщение всем пользователям, кто сейчас подключён к вебсокету и кому это сообщение играет хоть какое либо значение,
     // * например онлайн статусы идут тем кто в моих прямых чатах или состоит в одной из моих групп, ведь я потенциально могу его увидеть
     WSServer.clients.forEach(function (client) {
-        if ( directChats.has(client.authInfo.id) || hasIntersections(client.authInfo.rooms, rooms)) {
+        if ( directChats.has(client.authInfo._id) || hasIntersections(client.authInfo.rooms, rooms)) {
             client.send(JSON.stringify(message));
         }
     });
@@ -38,15 +36,14 @@ function sendItToUsersInRoom(roomID, message) {
     WSServer.clients.forEach(function (client) {
         if ( client.authInfo.rooms.has(roomID)) {
             client.send(JSON.stringify(message));
-            return;
         }
     });
 }
-function sendItToSpecificUser(userID, message) {
+function sendItToSpecificUser( userID, message ) {
     // * Отправляет сообщение конкретному пользователю
-    for (const client of WSServer.clients) {
-        if ( client.authInfo.id === userID ) {
-            client.send(JSON.stringify(message));
+    for ( const client of WSServer.clients ) {
+        if ( client.authInfo._id === userID ) {
+            client.send( JSON.stringify( message ) );
             return;
         }
     }
@@ -74,7 +71,15 @@ function setUserStatusAsOnline( authInfo ) {
         activeUsersCounter[ userID ]++;
     }
 }
-
+function getSuccessLoginPayload( authInfo ) {
+    return {
+        nickName: authInfo.nickName,
+        fullName: authInfo.fullName,
+        statusText: authInfo.statusText,
+        avatarLink: authInfo.avatarLink,
+        _id: authInfo._id.toString(),
+    }
+}
 function shutdown() {
     let haveErrors = false;
     console.log("Exiting...\n\nClosing WebSocket server...");
@@ -175,36 +180,29 @@ app.use(express.static(path.join(__dirname, "build")));
 app.get("/*", (request, response) => {
     response.sendFile(path.join(__dirname, "build", "index.html"));
 });
-// function deleteAccount( connection, body ) {
-//     deleteEntityById( request.session.authInfo._id );
-// }
-// app.get("/deleteAccount", function(request, response) {
-//     // TODO: По такому же принципу построить удаление комнат
-//     deleteEntityById(request.session.authInfo._id);
-//     logout(request, response);
-// });
-// TODO: Добавить шифрование на все поля в базе данных проекта
-// function logoutUser( connection ) {
-//     setUserStatusAsOffline( connection.authInfo );
-//     connection.authInfo = null;
-//     connection.addListener( "message", authorizationStep );
-//     connection.removeListener( "message", userQueriesHandler );
-// }
-// async function setMeAsLoggedOut( connection, body ) {
-//     let response = createEmptyMessageData( "respondFor", "setMeAsLoggedOut" );
-//     logoutUser( connection );
-//     response.report.isOK = true;
-//     sendMessage( connection, response );
-// }
+app.get("/deleteAccount", function(request, response) {
+    // TODO: По такому же принципу построить удаление комнат
+    deleteEntityById(request.session.authInfo._id);
+    logout(request, response);
+});
 
-function getSuccessLoginPayload( authInfo ) {
-    return {
-        nickName: authInfo.nickName,
-        fullName: authInfo.fullName,
-        statusText: authInfo.statusText,
-        avatarLink: authInfo.avatarLink,
-        _id: authInfo._id.toString(),
-    }
+async function deleteMyAccount( connection, body ) {
+    let response = createEmptyMessageData( "respondFor", "deleteMyAccount", { withReport: true } );
+    setUserStatusAsOffline( connection.authInfo );
+    // leaveAllChatsAndNotifyFriendsAboutThis();
+    deleteEntityById( connection.authInfo._id );
+    connection.authInfo = null;
+    response.report.isOK = true;
+    sendMessage( connection, response );
+}
+
+// TODO: Добавить шифрование на все поля в базе данных проекта
+async function logout( connection, body ) {
+    let response = createEmptyMessageData( "respondFor", "logout", { withReport: true } );
+    setUserStatusAsOffline( connection.authInfo );
+    connection.authInfo = null;
+    response.report.isOK = true;
+    sendMessage( connection, response );
 }
 
 async function login( connection, body ) {
@@ -341,15 +339,81 @@ async function confirmEmail( connection, body ) {
     }
     return response;
 }
+// TODO: Добавить обработчик для того чтобы присоединиться к комнате
+async function newMessage( connection, body ) {
+    const { to, text } = body.payload;
 
-async function unexpectedActionHandler( connection, body ) {
+    let response = createEmptyMessageData( "respondFor", "newMessage", { withReport: true } );
+    response.report = {
+        ...response.report,
+        ...validateNewMessagePayload( body.payload )
+    };
+
+    if ( response.report.info ) return response;
+    let message = {
+        to,
+        authorID: connection.authInfo.nickName,
+        text,
+        time: new Date()
+    };
+    try {
+        const result = await entities.findOne({ _id: new ObjectId( to )});
+        if ( !result ) {
+            response.report.info = "Чат не найден."
+            return response;
+        }
+        message.isDirect = !result.isRoom;
+        if ( result.isRoom && !connection.authInfo.rooms.has( to ) ) {
+            response.report.info = "У вас нет прав для отправки сообщения в эту комнату.";
+            return response;
+        }
+        if ( !result.isRoom && !connection.authInfo.directChats.has( to ) ) {
+            // TODO: Вызвать функцию, которая добавит id-шники обоим собеседникам в свои directChats в БД, в connection и отправит уведомления о добавлении нового чата этим двум пользователям
+        }
+    
+        const insertedMessage = ( await messages.insertOne( message ) ).ops[ 0 ];
+        response.report.info = "Сообщение успешно отправлено";
+        response.report.isOK = true;
+        const notification = createEmptyMessageData( "notifyAbout", "newMessage", { withPayload: true } );
+        notification.payload = insertedMessage;
+        if ( result.isRoom ) {
+            sendItToUsersInRoom( result._id, notification );
+        } else {
+            sendItToSpecificUser( result._id, notification );
+        }
+        WSServer.clients.forEach(function (client) {
+            if (client.authInfo.rooms.has(room)) {
+                client.send(JSON.stringify({handlerType: "message", msgID, ...message}));
+            }
+        });
+    } catch ( error ) {
+        console.log( "error: ", error );
+        response.report.info = "Произошла неизвестная ошибка на сервере. Сообщите администратору и повторите попытку верифицировать аккаунт позже.";
+    }
+    return response;
+}
+
+// function permissionsError( body ) {
+//     let response = createEmptyMessageData( "respondFor", body.action.type + body.action.what, { withReport: true } );
+//     response.report.info = `Вы не авторизованы в системе,чтобы выполнять эти команды`;
+//     return response;
+// }
+
+async function unexpectedAction( connection, body ) {
     let response = createEmptyMessageData( "respondFor", body.action.type + body.action.what, { withReport: true } );
     response.report.info = `Вы запросили несуществующий обработчик для ${ body.action.what } типа ${ body.action.type }`;
     return response;
 }
+
+async function creatingActionHandlerInProgress( connection, body ) {
+    let response = createEmptyMessageData( "respondFor", body.action.type + body.action.what, { withReport: true } );
+    response.report.info = `Обработчик для ${ body.action.what } типа ${ body.action.type } уже разрабатывается.`;
+    return response;
+}
+
 // TODO: Добавить восстановление аккаунта по почте
 // TODO: Добавить функцию добавления комнаты или юзера в чёрный список по id-шнику естественно
-const server = http.createServer(app);
+const server = http.createServer( app );
 const WSServer = new WebSocket.Server( {
     server
 } );
@@ -358,33 +422,43 @@ const beforeAuthHandlers = {
         login,
         register,
         confirmEmail,
-        // requestPasswordRestoring,
-        // confirmPasswordRestoring,
+        requestPasswordRestoring: creatingActionHandlerInProgress,
+        confirmPasswordRestoring: creatingActionHandlerInProgress,
     },
+    error: creatingActionHandlerInProgress, // TODO: Сделать чтобы отчёты об ошибках на клиенте летели на сервер
 };
 
 const afterAuthHandlers = {
     get : {
         // listofusersmathedtoparams
     },
+    new: {},
+    delete: {
+        myAccount: deleteMyAccount
+    },
     set : {},
-    start: {}
+    start: {},
+    // respondFor, // ?
+    // notifyAbout,// ?
+    // start,      // ?
+    // finish,      // ?
+    // error, // TODO: Сделать чтобы отчёты об ошибках на клиенте летели на сервер
     // logout,
 };
 
 function getHandlerMatchedToAction( action, variants ) {
-    if( !( action.type in variants ) ) return unexpectedActionHandler;
+    if( !( action.type in variants ) ) return unexpectedAction;
     const typebranch = variants[ action.type ];
     const what = typeof typebranch === "function"
         ? ( action.what === ""
             ? typebranch
-            : unexpectedActionHandler
+            : unexpectedAction
         )
         : ( action.what in typebranch
             ? typebranch[ action.what ]
-            : unexpectedActionHandler
+            : unexpectedAction
         )
-    return action.type in variants ? variants[ what ] : unexpectedActionHandler;
+    return action.type in variants ? variants[ what ] : unexpectedAction;
 }
 
 function validateAndPrepareInputData( input ) {
@@ -467,40 +541,6 @@ WSServer.on("connection", (connection, request) => {
 
 //         switch (handlerType) {
 //             case "message":
-//                 let message = {
-//                     to,
-//                     authorID: authInfo.nickName,
-//                     text,
-//                     time: new Date()
-//                 };
-//                 try {
-//                     const result = await entities.findOne({ _id: new ObjectId(to)});
-//                     if (!result) {
-//                         throw new Error("Чат не найден.");
-//                     }
-//                     message.isDirect = !result.isRoom;
-//                     if (result.isRoom && !authInfo.rooms.has(to)) {
-//                         throw new Error("У вас нет прав для отправки сообщения в эту комнату.");
-//                     }
-//                     if (!result.isRoom && !authInfo.directChats.has(to)) {
-//                         // TODO: Вызвать функцию, которая добавит id-шники обоим собеседникам в свои directChats в БД, в cессию, в connection и отправит уведомления этим двум пользователям
-//                     }
-
-//                     const msgID = (await messages.insertOne(message)).ops[0]._id;
-//                     rp.info = "Сообщение успешно отправлено";
-//                     rp.isError = false;
-//                     resdata.reply = { msgID };
-
-//                     WSServer.clients.forEach(function (client) {
-//                         if (client.authInfo.rooms.has(room)) {
-//                             client.send(JSON.stringify({handlerType: "message", msgID, ...message}));
-//                         }
-//                     });
-//                 } catch (err) {
-//                     console.log(err);
-//                     rp.info = err.message;
-//                 }
-//                 connection.send(JSON.stringify(resdata));
 //                 break;
 //             case "loadSpecificChatHistory":
 //                 messages.find({ room }, { projection: {room: 0} })
