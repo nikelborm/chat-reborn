@@ -93,7 +93,27 @@ function validateLoginPayload( payload = {} ) {
 
     return { info, pointerForDisplaing };
 }
+function validateNewMessagePayload( payload = {} ) {
+    let info = "";
+    let pointerForDisplaing = "";
+    const { to, text } = payload;
+
+    if( !isCorrect( to ) )
+    {
+        info = "Отсутствует поле с указанием получателя";
+        pointerForDisplaing = "nickNameOrEmail";
+    }
+    else if( !isCorrect( text ) )
+    {
+        info = "Сообщение не может быть пустым";
+        pointerForDisplaing = "";
+    }
+
+    return { info, pointerForDisplaing };
+}
+
 exports.isCorrect = isCorrect;
 exports.validateLoginPayload = validateLoginPayload;
+exports.validateNewMessagePayload = validateNewMessagePayload;
 exports.validateRegistrationPayload = validateRegistrationPayload;
 exports.validateFinishRegistrationPayload = validateFinishRegistrationPayload;
