@@ -40,7 +40,7 @@ function validateRegistrationPayload( payload = {} ) {
     else if( !isCorrect( password ) )
     {
         info = "Вы не ввели пароль";
-        pointerForDisplaing = "passwordRegister";
+        pointerForDisplaing = "password";
     }
     else if( !isCorrect( confirmPassword ) )
     {
@@ -50,12 +50,12 @@ function validateRegistrationPayload( payload = {} ) {
     else if ( password.length < 8 )
     {
         info = "Длина пароля должна быть от 8 символов";
-        pointerForDisplaing = "passwordRegister";
+        pointerForDisplaing = "password";
     }
     else if ( password.length > 40 )
     {
         info = "Длина пароля должна быть до 40 символов";
-        pointerForDisplaing = "passwordRegister";
+        pointerForDisplaing = "password";
     }
     else if ( confirmPassword !== password )
     {
@@ -78,17 +78,17 @@ function validateLoginPayload( payload = {} ) {
     else if( !isCorrect( password ) )
     {
         info = "Вы не ввели пароль";
-        pointerForDisplaing = "passwordLogin";
+        pointerForDisplaing = "password";
     }
     else if ( password.length < 8 )
     {
         info = "Длина пароля должна быть от 8 символов";
-        pointerForDisplaing = "passwordLogin";
+        pointerForDisplaing = "password";
     }
     else if ( password.length > 40 )
     {
         info = "Длина пароля должна быть до 40 символов";
-        pointerForDisplaing = "passwordLogin";
+        pointerForDisplaing = "password";
     }
 
     return { info, pointerForDisplaing };

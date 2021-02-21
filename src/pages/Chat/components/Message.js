@@ -31,6 +31,7 @@ const MessageContainer = styled.div`
 
 const ParsedMessageBody = styled.p`
     line-height: 20px;
+    margin: 0;
 `;
 
 const ParsedMessageTime = styled.span`

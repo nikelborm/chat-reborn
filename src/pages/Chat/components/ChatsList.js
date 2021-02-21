@@ -5,6 +5,8 @@ import styled from "styled-components";
 import { HeaderItem } from "./ChatListItems";
 
 const ChatListsWrapper = styled.ul`
+    margin: 0;
+    padding: 0;
     list-style: none;
 `;
 const Header = ({ children }) => (

@@ -6,6 +6,7 @@ import { RoomParticipantItem } from "./ChatListItems";
 
 const RoomsWrapper = styled.ul`
     list-style: none;
+    padding: 0;
     ${ props => ( !props.isExpanded
         ? `
             height: 0;

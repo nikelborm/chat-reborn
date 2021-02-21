@@ -19,7 +19,9 @@ const MessagesAreaWrapper = styled.div`
 const InfoInsteadMessages = styled.strong``;
 
 const MessagesList = styled.ul`
-    margin-right: -4px;
+    margin: 0 -4px 0 0;
+    padding: 0;
+    // margin-right: -4px;
 
     & > li:first-child {
         border-top: none;
