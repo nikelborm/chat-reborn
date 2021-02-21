@@ -15,11 +15,11 @@ function validate1lvl(mode, body) {
     if (mode === "register") {
         if (password.length < 8) {
             info = "Длина пароля должна быть от 8 символов";
-            errorField = "passwordRegister";
+            errorField = "password";
         }
         else if (password.length > 40) {
             info = "Длина пароля должна быть до 40 символов";
-            errorField = "passwordRegister";
+            errorField = "password";
         }
         else if (confirmPassword !== password) {
             info = "Пароли не совпадают";
@@ -45,7 +45,7 @@ function validate1lvl(mode, body) {
             break;
         case password:
             info = "Вы не ввели пароль";
-            errorField = mode === "login" ? "passwordLogin" : "passwordRegister";
+            errorField = "password";
     }
     resdata.reply.errorField = errorField;
     rp.info = info;

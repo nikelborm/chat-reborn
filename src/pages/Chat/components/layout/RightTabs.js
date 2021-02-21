@@ -17,6 +17,8 @@ const TabsContainer = styled.ul`
     border-left: 1px solid #cfdae1;
     border-top: 1px solid #cfdae1;
     width: 175px;
+    margin: 0;
+    padding: 0;
 `;
 
 const SettingsSymbol = styled.i`
@@ -31,6 +33,7 @@ const SettingsSymbol = styled.i`
 const TabsIcons = styled.ul`
 	list-style: none;
     overflow: hidden;
+    padding: 0;
 
     & > li {
         float: left;

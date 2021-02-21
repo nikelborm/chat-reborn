@@ -221,7 +221,7 @@ async function login( connection, body ) {
             response.report.pointerForDisplaing = "nickNameOrEmail";
             response.report.info = "Пользователь с указанными логином или почтой не найден";
         } else if ( foundUser.password !== sha256( password ) ) {
-            response.report.pointerForDisplaing = "passwordLogin";
+            response.report.pointerForDisplaing = "password";
             response.report.info = "Неверный пароль";
         } else if ( !foundUser.emailConfirmed ) {
             response.report.pointerForDisplaing = "nickNameOrEmail";
@@ -352,7 +352,7 @@ async function newMessage( connection, body ) {
     if ( response.report.info ) return response;
     let message = {
         to,
-        authorID: connection.authInfo.nickName,
+        authorID: connection.authInfo._id,
         text,
         time: new Date()
     };
@@ -381,11 +381,6 @@ async function newMessage( connection, body ) {
         } else {
             sendItToSpecificUser( result._id, notification );
         }
-        WSServer.clients.forEach(function (client) {
-            if (client.authInfo.rooms.has(room)) {
-                client.send(JSON.stringify({handlerType: "message", msgID, ...message}));
-            }
-        });
     } catch ( error ) {
         console.log( "error: ", error );
         response.report.info = "Произошла неизвестная ошибка на сервере. Сообщите администратору и повторите попытку верифицировать аккаунт позже.";

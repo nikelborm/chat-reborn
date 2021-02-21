@@ -1,8 +1,19 @@
-div, span, p, i, a, li, ul, button, img, input, form {
-    margin: 0;
+html, body {
+	margin: 0;
 	padding: 0;
 	border: 0;
-	font-size: 100%;
-	font: inherit;
-	vertical-align: baseline;
+	width: 100%;
+	height: 100%;
+	font-family: 'Open Sans', Arial, sans-serif;
+	line-height: 1;
 }
+#root {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	width: 100%;
+	height: 100%;
+	font-family: 'Open Sans', Arial, sans-serif;
+	line-height: 1;
+}
+
