@@ -1,9 +1,9 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import React, { Component } from 'react';
-import unnamed from '../../components/unnamed.jpg';
+// import unnamed from '../../components/unnamed.jpg';
 import bgimage from '../../components/m600x600.jpg';
 import styled from "styled-components";
-import { ShortFrame } from "../../components/Frames";
+import { ShortAuthFrame } from "../../components/Frames";
 import { withRouter } from "react-router-dom";
 
 const ProfilePhoto = styled.div`
@@ -46,17 +46,20 @@ const WelcomeText = styled.h1`
 `;
 
 class Welcome extends Component {
+    // componentDidMount() { // TODO: Либо доделать такую штуку с редиректом сначала на welcome а потом на чат. ИЛИ можно сделать чтобы компонент welcome показывался чисто пока загружаются все компоненты чата типа lazy load
+    //     setTimeout( ()=> { this.props.history.push( "/chat" ) },5000 );
+    // }
     render() {
         // TODO: Сделать чтобы подтягивалось из глобального контекста
         const { avatarStyle, fullName } = this.props;
         return (
-            <ShortFrame>
+            <ShortAuthFrame>
                 <WelcomeWrapper>
                     <CoverPhoto/>
                     <ProfilePhoto style={ avatarStyle }/>
                     <WelcomeText>Welcome,<br/>{ fullName }</WelcomeText>
                 </WelcomeWrapper>
-            </ShortFrame>
+            </ShortAuthFrame>
         );
     }
 }
