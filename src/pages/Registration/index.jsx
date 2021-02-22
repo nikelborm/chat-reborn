@@ -2,7 +2,7 @@
 import React, { Component } from 'react';
 import { withRouter } from "react-router-dom";
 import { ConfirmButton, Field, Form } from "../../components/FormComponents";
-import { LongFrame } from "../../components/Frames";
+import { LongAuthFrame } from "../../components/Frames";
 import { Menu, MenuItem } from "../../components/NavComponents";
 class RegistrationRoute extends Component {
     onGoToLogin = () => this.props.history.push("/auth/login");
@@ -22,7 +22,7 @@ class RegistrationRoute extends Component {
     };
     render() {
         return (
-            <LongFrame>
+            <LongAuthFrame>
                 <Menu>
                     <MenuItem onClick={ this.onGoToLogin }>
                         Sign in
@@ -51,7 +51,7 @@ class RegistrationRoute extends Component {
                         Создать аккаунт
                     </ConfirmButton>
                 </Form>
-            </LongFrame>
+            </LongAuthFrame>
         );
     }
 }
