@@ -2,6 +2,6 @@
 import React from "react";
 import { withRouter } from "react-router-dom";
 
-const ConfirmRegistration = props => <span> ConfirmRegistration </span>;
+const PasswordRestoringRequested = props => <span> PasswordRestoringRequested </span>;
 
-export default withRouter( ConfirmRegistration );
+export default withRouter( PasswordRestoringRequested );
