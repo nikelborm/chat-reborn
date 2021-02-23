@@ -20,7 +20,7 @@ const TextContainer = styled.div`
     line-height: 31px;
 `;
 
-const SuccessRegistration = props => (
+const RegistrationRequested = props => (
     <ShortAuthFrame>
         <CentererWrapper>
             <TextContainer>
@@ -29,4 +29,4 @@ const SuccessRegistration = props => (
         </CentererWrapper>
     </ShortAuthFrame>
 );
-export default withRouter( SuccessRegistration );
+export default withRouter( RegistrationRequested );

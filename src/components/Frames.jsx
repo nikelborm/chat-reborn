@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import frameBackgroundImage from "./m600x600.jpg";
+import frameBackgroundImage from "../styles/m600x600.jpg";
 export const AuthFrame = styled.div`
     width: 430px;
     background: linear-gradient(rgba(35, 43, 85, 0.65), rgba(35, 43, 85, 0.95)), url(${ frameBackgroundImage }) no-repeat center center;

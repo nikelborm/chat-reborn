@@ -2,7 +2,7 @@
 import React from "react";
 import styled from "styled-components";
 import getCookie from "../../../tools/getCookie";
-import emptyAvatar from "../styles/unnamed.jpg";
+import emptyAvatar from "../../../styles/unnamed.jpg";
 
 const MyAccountInfoContainer = styled.div`
     position: absolute;

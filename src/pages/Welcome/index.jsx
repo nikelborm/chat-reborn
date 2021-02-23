@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import React, { Component } from 'react';
-// import unnamed from '../../components/unnamed.jpg';
-import bgimage from '../../components/m600x600.jpg';
+// import unnamed from '../../styles/unnamed.jpg';
+import bgimage from '../../styles/m600x600.jpg';
 import styled from "styled-components";
 import { ShortAuthFrame } from "../../components/Frames";
 import { withRouter } from "react-router-dom";

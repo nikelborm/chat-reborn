@@ -3,6 +3,8 @@ import WindowArea from "./components/WindowArea";
 import WindowTitle from "./components/layout/WindowTitle";
 import styled from "styled-components";
 import { withRouter } from "react-router-dom";
+
+// TODO: добавить ленивую предзагрузку как самого чата, так и дополнительную предзагрузку всех шрифтов, картинок, иконок, иконочных шрифтов, свгшечек прямо в код public/index.html страницы https://habr.com/ru/post/445264/
 const WindowWrapper = styled.div`
     background: #fff;
     width: 780px;
