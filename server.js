@@ -350,19 +350,19 @@ async function newMessage( connection, body ) {
     };
 
     if ( response.report.info ) return response;
-    let message = {
-        to,
-        authorID: connection.authInfo._id,
-        text,
-        time: new Date()
-    };
     try {
         const result = await entities.findOne({ _id: new ObjectId( to )});
         if ( !result ) {
             response.report.info = "Чат не найден."
             return response;
         }
-        message.isDirect = !result.isRoom;
+        let message = {
+            to,
+            authorID: connection.authInfo._id,
+            text,
+            time: new Date(),
+            isDirect: !result.isRoom
+        };
         if ( result.isRoom && !connection.authInfo.rooms.has( to ) ) {
             response.report.info = "У вас нет прав для отправки сообщения в эту комнату.";
             return response;
@@ -370,7 +370,7 @@ async function newMessage( connection, body ) {
         if ( !result.isRoom && !connection.authInfo.directChats.has( to ) ) {
             // TODO: Вызвать функцию, которая добавит id-шники обоим собеседникам в свои directChats в БД, в connection и отправит уведомления о добавлении нового чата этим двум пользователям
         }
-    
+
         const insertedMessage = ( await messages.insertOne( message ) ).ops[ 0 ];
         response.report.info = "Сообщение успешно отправлено";
         response.report.isOK = true;

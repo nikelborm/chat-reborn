@@ -73,38 +73,40 @@ class InputForm extends PureComponent {
     }
     sendMsgInChat = (e) => {
         e.preventDefault();
-        if (window.isSocketAvailable) {
+        if ( window.isSocketAvailable ) {
             this.instanceRef.current.hide();
-            const data = {
-                handlerType: "message",
-                to: this.props.activeChat,
-                text: this.inputArea.current.value
-            };
+            this.props.actions.sendMessage( this.inputArea.current.value );
             this.inputArea.current.value = "";
-            window.socket.send(JSON.stringify(data));
         } else {
             // TODO: Добавить Tippy с выводом, что соединение потеряно
-            console.log("Сокет недоступен");
+            console.log( "Сокет недоступен" );
         }
     };
-    chooseEmoji = (emoji) => {
+    chooseEmoji = ( emoji ) => {
         this.inputArea.current.value += emoji;
     };
+    onEmojiChooserCreate = ( instance ) => {
+        this.instanceRef.current = instance;
+    };
+    componentDidMount() {
+        console.log(this.props);
+    }
+    
     render() {
         return (
             <InputArea>
                 <InputWrapper>
                     <MessageEnteringField type="text" defaultValue="" ref={ this.inputArea }/>
                     <Tippy
-                        content={this.emojiPicker}
+                        content={ this.emojiPicker }
                         animation="perspective"
                         trigger="click"
                         theme="emoji"
-                        interactive={true}
-                        inertia={true}
-                        arrow={false}
-                        duration={[350, 200]}
-                        onCreate={(instance) => (this.instanceRef.current = instance)}
+                        interactive={ true }
+                        inertia={ true }
+                        arrow={ false }
+                        duration={ [ 350, 200 ] }
+                        onCreate={ this.onEmojiChooserCreate }
                     >
                         <i className="fa fa-smile-o"></i>
                     </Tippy>
